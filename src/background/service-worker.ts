@@ -34,7 +34,7 @@ async function openOrFocusDashboardInCurrentWindow(): Promise<void> {
 
     // Open a fresh dashboard tab in the current window
     await chrome.tabs.create({
-      url: dashboardUrl,
+      url: indexUrl,
       active: true,
     });
   } catch (err) {

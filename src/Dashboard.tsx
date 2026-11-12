@@ -74,8 +74,10 @@ export const Dashboard: React.FC = () => {
       // Fetch open browser tabs for drag-and-drop dock
       getOpenBrowserTabs(true).then((tabs) => setOpenTabsList(tabs)).catch(() => {});
       // Initialize Rust Wasm core & sync initial state
-      initRustCore().then(() => {
-        syncWorkspacesToRust(loadedWorkspaces);
+      initRustCore().then((instance) => {
+        if (instance) {
+          syncWorkspacesToRust(loadedWorkspaces);
+        }
       }).catch(err => console.warn('[Rust Wasm] Core initialization skipped:', err));
     } catch (err) {
       console.error('Error loading workspaces:', err);

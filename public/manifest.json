@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Orbita - Workspaces & Tab Manager",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Group your tabs into clean, purpose-driven workspaces. Switch contexts cleanly without losing your place.",
   "permissions": [
     "storage",

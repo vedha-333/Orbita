@@ -382,7 +382,7 @@ export async function openSinglePage(url: string): Promise<void> {
 export async function openDashboardInNewWindow(): Promise<void> {
   const dashboardUrl =
     typeof chrome !== 'undefined' && chrome.runtime?.getURL
-      ? chrome.runtime.getURL('dashboard.html')
+      ? chrome.runtime.getURL('index.html')
       : 'index.html';
 
   if (!isExtensionEnvironment()) {

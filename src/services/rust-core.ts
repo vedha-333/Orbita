@@ -5,9 +5,10 @@ let managerInstance: WorkspaceManager | null = null;
 let isInitialized = false;
 
 /**
- * Initializes the Rust WebAssembly module
+ * Initializes the Rust WebAssembly module with graceful fallback.
+ * Uses ArrayBuffer loading under the hood to bypass Chrome extension streaming MIME type issues.
  */
-export async function initRustCore(): Promise<WorkspaceManager> {
+export async function initRustCore(): Promise<WorkspaceManager | null> {
   if (managerInstance && isInitialized) {
     return managerInstance;
   }
@@ -19,8 +20,10 @@ export async function initRustCore(): Promise<WorkspaceManager> {
     console.info('🚀 [Rust Wasm] Core engine initialized successfully');
     return managerInstance;
   } catch (err) {
-    console.error('❌ [Rust Wasm] Failed to initialize core:', err);
-    throw err;
+    console.warn('⚠️ [Rust Wasm] Failed to initialize core. Operating in TypeScript fallback mode:', err);
+    managerInstance = null;
+    isInitialized = false;
+    return null;
   }
 }
 
