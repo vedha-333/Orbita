@@ -373,3 +373,63 @@ export async function openSinglePage(url: string): Promise<void> {
     window.open(fullUrl, '_blank', 'noopener,noreferrer');
   }
 }
+
+/**
+ * Chrome-Safe Window Opening Logic
+ * Creates an empty normal window first, opens the dashboard, and cleans up about:blank
+ * to completely bypass Chrome's aggressive popup blocker.
+ */
+export async function openDashboardInNewWindow(): Promise<void> {
+  const dashboardUrl =
+    typeof chrome !== 'undefined' && chrome.runtime?.getURL
+      ? chrome.runtime.getURL('dashboard.html')
+      : 'index.html';
+
+  if (!isExtensionEnvironment()) {
+    window.open(window.location.href, '_blank');
+    return;
+  }
+
+  try {
+    // 1. Create a standard blank window (bypasses the popup blocker)
+    const newWindow = (await chrome.windows.create({
+      url: 'about:blank',
+      type: 'normal', // Crucial: explicitly set to 'normal', not 'popup'
+      focused: true,
+    })) as chrome.windows.Window;
+
+    const windowId = newWindow?.id;
+
+    if (windowId) {
+      // 2. Open the dashboard inside that specific window
+      await chrome.tabs.create({
+        url: dashboardUrl,
+        windowId: windowId,
+        active: true,
+      });
+
+      // 3. Remove the initial 'about:blank' tab so the user doesn't see a blank flash
+      if (newWindow.tabs && newWindow.tabs[0] && newWindow.tabs[0].id) {
+        await chrome.tabs.remove(newWindow.tabs[0].id);
+      } else {
+        const tabs = await chrome.tabs.query({ windowId });
+        const blankTab = tabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank');
+        if (blankTab?.id && tabs.length > 1) {
+          await chrome.tabs.remove(blankTab.id);
+        }
+      }
+
+      try {
+        await chrome.windows.update(windowId, { focused: true });
+      } catch (_) {}
+    }
+  } catch (error) {
+    console.error('Failed to open dashboard in new window:', error);
+    // Optional fallback: open in current window if Chrome absolutely refuses
+    try {
+      await chrome.tabs.create({ url: dashboardUrl, active: true });
+    } catch (_) {
+      window.open(dashboardUrl, '_blank');
+    }
+  }
+}

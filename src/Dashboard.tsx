@@ -592,6 +592,7 @@ export const Dashboard: React.FC = () => {
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenInNewWindow={openDashboardInNewWindow}
       />
 
       {/* Main Content Area */}
