@@ -1,0 +1,31 @@
+{
+  "name": "my-task-browser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-browser productivity extension organizing browser tabs around tasks and workflows",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "build:wasm": "cd crates/core && wasm-pack build --target web --out-dir ../../src/wasm",
+    "package": "npm run build && powershell Compress-Archive -Path dist/* -DestinationPath my-task-browser-v0.1.0.zip -Force"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.307",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Orbita - Workspaces & Tab Manager",
+  "version": "0.1.0",
+  "description": "Group your tabs into clean, purpose-driven workspaces. Switch contexts cleanly without losing your place.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "windows",
+    "tabGroups"
+  ],
+  "action": {
+    "default_title": "Orbita Dashboard",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "commands": {
+    "open-dashboard": {
+      "suggested_key": {
+        "default": "Alt+D",
+        "mac": "Alt+D"
+      },
+      "description": "Open Orbita Dashboard in current window"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

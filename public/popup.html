@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orbita - Quick Menu</title>
+    <style>
+      :root {
+        --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --bg-primary: #F8FAFC;
+        --bg-card: #FFFFFF;
+        --text-primary: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #64748B;
+        --accent-primary: #2563EB;
+        --accent-primary-hover: #1D4ED8;
+        --border-subtle: #E2E8F0;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        width: 320px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        padding: 18px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .brand-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #2563EB;
+        box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+      }
+
+      .brand-name {
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+      }
+
+      .status-pill {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563EB;
+      }
+
+      .popup-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        margin-bottom: 14px;
+        text-align: center;
+      }
+
+      .card-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: var(--text-primary);
+      }
+
+      .card-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        margin-bottom: 14px;
+        line-height: 1.4;
+      }
+
+      .btn-open-dashboard {
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #2563EB;
+        color: #FFFFFF;
+        font-family: inherit;
+        font-size: 0.88rem;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+        transition: all 0.2s;
+      }
+
+      .btn-open-dashboard:hover {
+        background: #1D4ED8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+      }
+
+      .btn-open-dashboard:active {
+        transform: translateY(0);
+      }
+
+      .shortcut-tag {
+        font-size: 0.72rem;
+        background: rgba(255, 255, 255, 0.22);
+        padding: 2px 6px;
+        border-radius: 6px;
+        margin-left: 4px;
+        font-weight: 600;
+      }
+
+      .popup-footer-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        padding: 0 4px;
+      }
+
+      .footer-shortcut {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      kbd {
+        background: #FFFFFF;
+        border: 1px solid var(--border-subtle);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-family: monospace;
+        font-size: 0.7rem;
+        color: var(--text-primary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="popup-header">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-name">orbita</span>
+      </div>
+      <span class="status-pill" id="tabs-count-badge">Loading...</span>
+    </div>
+
+    <div class="popup-card">
+      <h3 class="card-title">Task Workspaces</h3>
+      <p class="card-desc">Group, switch, and launch tabs cleanly without slowing down your browser.</p>
+
+      <button id="btn-open-dashboard" class="btn-open-dashboard">
+        <span>Open Full Dashboard</span>
+        <span class="shortcut-tag">Alt+D</span>
+      </button>
+    </div>
+
+    <div class="popup-footer-info">
+      <span>Scoped to this window</span>
+      <span class="footer-shortcut">Shortcut: <kbd>Alt + D</kbd></span>
+    </div>
+
+    <script>
+      // Load current window open tabs count
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+        chrome.tabs.query({ currentWindow: true }, function (tabs) {
+          var count = tabs ? tabs.length : 0;
+          var badge = document.getElementById('tabs-count-badge');
+          if (badge) {
+            badge.textContent = count + (count === 1 ? ' tab open' : ' tabs open');
+          }
+        });
+      }
+
+      // Handle Open Full Dashboard button click
+      var btn = document.getElementById('btn-open-dashboard');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          if (typeof chrome !== 'undefined' && chrome.tabs) {
+            var dashboardUrl = chrome.runtime.getURL('index.html');
+            chrome.tabs.query({ currentWindow: true }, function (tabs) {
+              var existing = tabs && tabs.find(function (t) {
+                return t.url && (t.url.indexOf('index.html') !== -1 || t.url.indexOf('dashboard.html') !== -1);
+              });
+              if (existing && existing.id) {
+                chrome.tabs.update(existing.id, { active: true }, function () {
+                  window.close();
+                });
+              } else {
+                chrome.tabs.create({ url: dashboardUrl, active: true }, function () {
+                  window.close();
+                });
+              }
+            });
+          } else {
+            window.open('index.html', '_blank');
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
+

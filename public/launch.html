@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opening Workspace...</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #090D16;
+    color: #F8FAFC;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .card {
+    background: #0F172A;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 20px;
+    padding: 36px 40px;
+    max-width: 620px;
+    width: 100%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+  }
+
+  .top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+  .ws-icon { font-size: 2.4rem; line-height: 1; }
+  .ws-name { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+  .ws-desc { font-size: 0.82rem; color: #64748B; margin-top: 5px; margin-bottom: 24px; }
+
+  /* Progress */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .progress-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; }
+  .progress-count { font-size: 0.78rem; color: #60A5FA; font-weight: 700; }
+  .progress-bar-wrap { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#3B82F6,#8B5CF6,#EC4899); border-radius: 3px; transition: width 0.35s cubic-bezier(0.16,1,0.3,1); width: 0%; }
+
+  /* URL List */
+  .url-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+
+  .url-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.3s;
+  }
+  .url-row.current {
+    border-color: rgba(59,130,246,0.6);
+    background: rgba(59,130,246,0.06);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  }
+  .url-row.done {
+    border-color: rgba(16,185,129,0.3);
+    background: rgba(16,185,129,0.04);
+  }
+
+  .favicon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+  .url-text { flex: 1; font-size: 0.78rem; color: #64748B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; }
+  .url-row.current .url-text { color: #93C5FD; }
+  .url-row.done .url-text { color: #6EE7B7; }
+
+  .row-status { font-size: 0.78rem; flex-shrink: 0; }
+
+  /* ── Start button ── */
+  #start-btn {
+    width: 100%;
+    padding: 16px 0;
+    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 4px 28px rgba(59,130,246,0.4);
+    margin-bottom: 20px;
+    letter-spacing: 0.01em;
+    animation: pulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite;
+  }
+  #start-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(59,130,246,0.5); }
+  #start-btn:active { transform: scale(0.98); animation: none; }
+  #start-btn.hidden { display: none; }
+
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+    100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+  }
+
+  /* Done state */
+  #done-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #10B981;
+  }
+  #done-banner.visible { display: flex; }
+
+  /* Status / In-progress banner */
+  #status-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #60A5FA;
+  }
+  #status-banner.visible { display: flex; }
+
+  /* Popup-blocked warning banner */
+  #blocked-banner {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  #blocked-banner.visible { display: flex; }
+  .blocked-title {
+    color: #F87171;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .blocked-desc {
+    color: #CBD5E1;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .blocked-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #94A3B8;
+  }
+  .blocked-badge {
+    background: rgba(239, 68, 68, 0.2);
+    color: #FCA5A5;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  #resume-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px 0;
+    background: linear-gradient(135deg, #10B981, #059669);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+  }
+  #resume-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.4); }
+
+  .close-btn {
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    color: #64748B;
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .close-btn:hover { background: rgba(255,255,255,0.07); color: #94A3B8; }
+
+  .ext-note {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.72rem;
+    color: #334155;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .ext-note strong { color: #475569; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top-bar">
+    <span class="ws-icon" id="ws-icon">📁</span>
+    <span class="ws-name" id="ws-name">Workspace</span>
+  </div>
+  <p class="ws-desc" id="ws-desc"></p>
+
+  <div class="progress-row">
+    <span class="progress-label">Pages</span>
+    <span class="progress-count" id="progress-count">0 / 0</span>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar"></div>
+  </div>
+
+  <div class="url-list" id="url-list"></div>
+
+  <!-- Auto-Opening Status banner -->
+  <div id="status-banner">
+    <span class="spinner">⏳</span>
+    <span id="status-text">Auto-opening tabs...</span>
+  </div>
+
+  <!-- Popup blocked banner (shows only if Opera/Chrome blocks multi-tabs) -->
+  <div id="blocked-banner">
+    <div class="blocked-title">
+      <span>🚫</span>
+      <span>Browser Blocked Automatic Tabs</span>
+    </div>
+    <p class="blocked-desc">
+      Opera blocked multiple tabs from opening automatically. Enable pop-ups for localhost once:
+    </p>
+    <div class="blocked-step">
+      <span class="blocked-badge">Step 1</span>
+      <span>Click the <strong>Pop-up blocked</strong> icon (<strong style="color:#FCA5A5;">Ex Pop-up blocked</strong>) in your address bar above ↑</span>
+    </div>
+    <div class="blocked-step">
+      <span class="blocked-badge">Step 2</span>
+      <span>Choose <strong>"Always allow pop-ups from http://localhost:..."</strong> and click <strong>Done</strong>.</span>
+    </div>
+    <button id="resume-btn" onclick="resumeAutoOpening()">▶ Resume Auto-Opening</button>
+  </div>
+
+  <!-- Start / Trigger button -->
+  <button id="start-btn" onclick="userTriggerStart()">🚀 Auto-Open All Tabs</button>
+
+  <!-- Done -->
+  <div id="done-banner">
+    ✅ All tabs opened! Close this tab when ready.
+  </div>
+
+  <button class="close-btn" onclick="window.close()">Close This Tab</button>
+
+  <p class="ext-note">
+    <strong>💡 Tip:</strong> Once pop-ups are allowed for localhost, all tabs will open automatically in sequence while keeping you on this page.
+  </p>
+</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  let urls = [];
+  try { urls = JSON.parse(decodeURIComponent(params.get('urls') || '[]')); } catch(e) {}
+  const name = decodeURIComponent(params.get('name') || 'Workspace');
+  const icon = decodeURIComponent(params.get('icon') || '📁');
+  const desc = decodeURIComponent(params.get('desc') || '');
+
+  document.getElementById('ws-name').textContent = name;
+  document.getElementById('ws-icon').textContent = icon;
+  document.getElementById('ws-desc').textContent = desc;
+  document.title = icon + ' ' + name;
+
+  const listEl        = document.getElementById('url-list');
+  const progressBar   = document.getElementById('progress-bar');
+  const progressCount = document.getElementById('progress-count');
+  const startBtn      = document.getElementById('start-btn');
+  const statusBanner  = document.getElementById('status-banner');
+  const statusText    = document.getElementById('status-text');
+  const blockedBanner = document.getElementById('blocked-banner');
+  const doneBanner    = document.getElementById('done-banner');
+
+  const rows = [];
+  let currentIndex = 0;
+  let isRunning = false;
+  let countdownTimer = null;
+
+  // True when running as an installed Chrome/Opera extension
+  const isExtension = typeof chrome !== 'undefined'
+                   && typeof chrome.tabs !== 'undefined'
+                   && location.protocol === 'chrome-extension:';
+
+  function hostname(url) {
+    try { return new URL(url).hostname; } catch(e) { return url; }
+  }
+
+  // Render URL list
+  urls.forEach((url, i) => {
+    const row = document.createElement('div');
+    row.className = 'url-row' + (i === 0 ? ' current' : '');
+
+    const fav = document.createElement('img');
+    fav.className = 'favicon';
+    fav.src = 'https://www.google.com/s2/favicons?domain=' + hostname(url) + '&sz=32';
+    fav.onerror = () => { fav.style.display = 'none'; };
+
+    const text = document.createElement('span');
+    text.className = 'url-text';
+    text.textContent = url;
+    text.title = url;
+
+    const status = document.createElement('span');
+    status.className = 'row-status';
+    status.textContent = i === 0 ? '▶' : '·';
+
+    row.appendChild(fav);
+    row.appendChild(text);
+    row.appendChild(status);
+    listEl.appendChild(row);
+    rows.push({ row, status });
+  });
+
+  progressCount.textContent = '0 / ' + urls.length;
+
+  function markRowDone(i) {
+    if (rows[i]) {
+      rows[i].row.classList.remove('current');
+      rows[i].row.classList.add('done');
+      rows[i].status.textContent = '✓';
+    }
+  }
+
+  function markRowCurrent(i) {
+    if (i < rows.length) {
+      rows[i].row.classList.add('current');
+      rows[i].status.textContent = '▶';
+      rows[i].row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function updateProgress(opened) {
+    progressBar.style.width = (opened / urls.length * 100) + '%';
+    progressCount.textContent = opened + ' / ' + urls.length;
+  }
+
+  function showDone() {
+    isRunning = false;
+    startBtn.classList.add('hidden');
+    statusBanner.classList.remove('visible');
+    blockedBanner.classList.remove('visible');
+    doneBanner.classList.add('visible');
+  }
+
+  // ── Open a single tab in the background while keeping THIS page active ──
+  function openTabAndKeepFocus(url) {
+    // Open in background / new tab
+    const win = window.open(url, '_blank');
+    
+    // Aggressively keep focus on THIS page so the browser never redirects away
+    window.focus();
+    if (win) {
+      try {
+        win.blur();
+      } catch(e) {}
+    }
+    // Repeat focus after slight tick to prevent browser tab-switching race conditions
+    setTimeout(() => {
+      window.focus();
+    }, 20);
+    setTimeout(() => {
+      window.focus();
+    }, 100);
+
+    return win;
+  }
+
+  // ── Automatic Sequential Opener (Wait then open) ──
+  async function runAutoOpen(startIndex = 0) {
+    if (isRunning) return;
+    isRunning = true;
+
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+
+    startBtn.classList.add('hidden');
+    blockedBanner.classList.remove('visible');
+    statusBanner.classList.add('visible');
+
+    // Extension mode
+    if (isExtension) {
+      for (let i = startIndex; i < urls.length; i++) {
+        currentIndex = i;
+        markRowCurrent(i);
+        statusText.textContent = `Opening tab ${i + 1} of ${urls.length}...`;
+        await chrome.tabs.create({ url: urls[i], active: false });
+        markRowDone(i);
+        updateProgress(i + 1);
+        await new Promise(r => setTimeout(r, 100));
+      }
+      showDone();
+      return;
+    }
+
+    // Web / Localhost mode: open sequentially with wait
+    for (let i = startIndex; i < urls.length; i++) {
+      currentIndex = i;
+      markRowCurrent(i);
+      statusText.textContent = `Auto-opening tab ${i + 1} of ${urls.length}...`;
+
+      const win = openTabAndKeepFocus(urls[i]);
+
+      // Check if browser's popup blocker intercepted the tab
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        isRunning = false;
+        statusBanner.classList.remove('visible');
+        blockedBanner.classList.add('visible');
+        return; // Pause until user allows popups and clicks Resume
+      }
+
+      markRowDone(i);
+      updateProgress(i + 1);
+
+      // Wait between opening tabs so the browser processes each smoothly
+      await new Promise(r => setTimeout(r, 650));
+    }
+
+    showDone();
+  }
+
+  // User manually clicked Start button
+  function userTriggerStart() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    runAutoOpen(currentIndex);
+  }
+
+  // Resume after user allows pop-up permission in Opera/Chrome
+  function resumeAutoOpening() {
+    blockedBanner.classList.remove('visible');
+    runAutoOpen(currentIndex);
+  }
+
+  // Pull focus back if browser tries to jump away during opening
+  window.addEventListener('blur', () => {
+    if (isRunning) {
+      setTimeout(() => { window.focus(); }, 30);
+    }
+  });
+
+  // ── Auto-start countdown on load ──
+  window.addEventListener('DOMContentLoaded', () => {
+    let secondsLeft = 1;
+    startBtn.textContent = `🚀 Auto-Opening in ${secondsLeft}s (or click now)`;
+
+    countdownTimer = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        runAutoOpen(0);
+      } else {
+        startBtn.textContent = `🚀 Auto-Opening in ${secondsLeft}s (or click now)`;
+      }
+    }, 1000);
+  });
+</script>
+</body>
+</html>
