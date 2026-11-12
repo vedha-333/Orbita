@@ -1,6 +1,6 @@
 {
   "name": "my-task-browser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Cross-browser productivity extension organizing browser tabs around tasks and workflows",
   "type": "module",
