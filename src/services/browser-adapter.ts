@@ -225,44 +225,63 @@ export async function launchWorkspace(
   if (isExtensionEnvironment()) {
     try {
       if (mode === 'new-window') {
-        // Fix 2: NO TAB GROUPING IN NEW WINDOW!
-        // The window itself is already the isolated container.
-        // Calling tabs.group across windows is what triggered Chromium to pull tabs back into caller's window.
-        const newWindow = (await chrome.windows.create({
-          url: urls[0],
-          type: 'normal',
-          focused: true,
-        })) as chrome.windows.Window;
+        try {
+          // Step 1: Create standard normal window with about:blank first (bypasses Chrome pop-up blocker)
+          const newWindow = (await chrome.windows.create({
+            url: 'about:blank',
+            type: 'normal',
+            focused: true,
+          })) as chrome.windows.Window;
 
-        const newWinId = newWindow?.id;
+          const newWinId = newWindow?.id;
 
-        if (newWinId) {
-          // Open any remaining workspace pages directly inside this new window
-          for (let i = 1; i < urls.length; i++) {
-            await chrome.tabs.create({
+          if (newWinId) {
+            // Find initial blank tab
+            const initialTabs = newWindow.tabs || (await chrome.tabs.query({ windowId: newWinId }));
+            const blankTabId =
+              initialTabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank')?.id ||
+              initialTabs[0]?.id;
+
+            // Step 2: Populate with workspace tabs
+            for (let i = 0; i < urls.length; i++) {
+              await chrome.tabs.create({
+                windowId: newWinId,
+                url: urls[i],
+                active: i === 0, // Set first tab as active
+              });
+            }
+
+            // Step 3: Remove the initial blank tab
+            if (blankTabId) {
+              try {
+                await chrome.tabs.remove(blankTabId);
+              } catch (_) {}
+            }
+
+            // Ensure the new window is brought to front
+            try {
+              await chrome.windows.update(newWinId, { focused: true });
+            } catch (_) {}
+
+            return {
+              success: true,
               windowId: newWinId,
-              url: urls[i],
-              active: false,
-            });
+              openedUrlsCount: urls.length,
+              message: `Opened all ${urls.length} pages in a new window.`,
+            };
           }
-
-          // Ensure the new window is brought to front
-          try {
-            await chrome.windows.update(newWinId, { focused: true });
-          } catch (_) {}
-        } else {
-          // Fallback if window creation did not return an id
+        } catch (winErr) {
+          console.warn('New window creation failed or blocked by policy; falling back to current window:', winErr);
+          // Defensive fallback: Open in current window if Chrome/policy blocks new window creation
           for (const url of urls) {
             await chrome.tabs.create({ url, active: false });
           }
+          return {
+            success: true,
+            openedUrlsCount: urls.length,
+            message: `Opened all ${urls.length} pages in current window (new window blocked by browser).`,
+          };
         }
-
-        return {
-          success: true,
-          windowId: newWinId,
-          openedUrlsCount: urls.length,
-          message: `Opened all ${urls.length} pages in a new window.`,
-        };
       }
 
       // CURRENT WINDOW MODE

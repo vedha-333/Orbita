@@ -86,33 +86,51 @@ async function handleLaunchWorkspace(payload: {
   let targetWindowId: number | undefined;
 
   if (mode === 'new-window') {
-    const newWindow = (await chrome.windows.create({
-      url: urls[0],
-      type: 'normal',
-      focused: true,
-    })) as chrome.windows.Window;
-    targetWindowId = newWindow?.id;
+    try {
+      // Step 1: Create standard normal window with about:blank first (bypasses Chrome pop-up blocker)
+      const newWindow = (await chrome.windows.create({
+        url: 'about:blank',
+        type: 'normal',
+        focused: true,
+      })) as chrome.windows.Window;
+      targetWindowId = newWindow?.id;
 
-    if (targetWindowId) {
-      for (let i = 1; i < urls.length; i++) {
-        await chrome.tabs.create({
-          windowId: targetWindowId,
-          url: urls[i],
-          active: false,
-        });
+      if (targetWindowId) {
+        // Find initial blank tab
+        const initialTabs = newWindow.tabs || (await chrome.tabs.query({ windowId: targetWindowId }));
+        const blankTabId =
+          initialTabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank')?.id ||
+          initialTabs[0]?.id;
+
+        // Step 2: Populate with workspace tabs
+        for (let i = 0; i < urls.length; i++) {
+          await chrome.tabs.create({
+            windowId: targetWindowId,
+            url: urls[i],
+            active: i === 0,
+          });
+        }
+
+        // Step 3: Remove initial about:blank tab
+        if (blankTabId) {
+          try {
+            await chrome.tabs.remove(blankTabId);
+          } catch (_) {}
+        }
+
+        try {
+          await chrome.windows.update(targetWindowId, { focused: true });
+        } catch (_) {}
+
+        return { success: true, windowId: targetWindowId, count: urls.length };
       }
-
-      try {
-        await chrome.windows.update(targetWindowId, { focused: true });
-      } catch (_) {}
-    } else {
+    } catch (winErr) {
+      console.warn('Background new window creation failed/blocked; falling back to current window:', winErr);
       for (const url of urls) {
         await chrome.tabs.create({ url, active: false });
       }
+      return { success: true, count: urls.length };
     }
-
-    // No tab grouping in new window - window is the container
-    return { success: true, windowId: targetWindowId, count: urls.length };
   }
 
   // Current window mode

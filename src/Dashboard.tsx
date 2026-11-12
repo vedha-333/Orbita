@@ -288,6 +288,7 @@ export const Dashboard: React.FC = () => {
   const openDashboardInNewWindow = async (): Promise<void> => {
     if (isExtensionContext()) {
       try {
+        // Step 1: Create an empty normal window first (bypasses Chrome pop-up blocker)
         const newWin = (await chrome.windows.create({
           url: 'about:blank',
           focused: true,
@@ -296,16 +297,34 @@ export const Dashboard: React.FC = () => {
         const windowId = newWin?.id;
         const dashboardUrl = chrome.runtime.getURL('index.html');
         if (windowId) {
-          await chrome.tabs.create({ url: dashboardUrl, windowId });
+          // Identify initial blank tab
           const winTabs = await chrome.tabs.query({ windowId });
-          const blankTab = winTabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank');
-          if (blankTab?.id && winTabs.length > 1) {
-            await chrome.tabs.remove(blankTab.id);
+          const blankTabId =
+            winTabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank')?.id ||
+            winTabs[0]?.id;
+
+          // Step 2: Populate with the dashboard tab
+          await chrome.tabs.create({ url: dashboardUrl, windowId, active: true });
+
+          // Step 3: Remove the initial about:blank tab
+          if (blankTabId) {
+            try {
+              await chrome.tabs.remove(blankTabId);
+            } catch (_) {}
           }
+
+          // Ensure focus
+          try {
+            await chrome.windows.update(windowId, { focused: true });
+          } catch (_) {}
+          return;
         }
-        return;
       } catch (err) {
-        console.warn('Failed to open dashboard via chrome API:', err);
+        console.warn('Failed to open dashboard in new window; falling back to current window:', err);
+        try {
+          await chrome.tabs.create({ url: chrome.runtime.getURL('index.html'), active: true });
+          return;
+        } catch (_) {}
       }
     }
     window.open(window.location.href, '_blank');
@@ -333,17 +352,60 @@ export const Dashboard: React.FC = () => {
     }
 
     if (mode === 'new-window') {
-      // Action (New Window): Do NOT call chrome.tabs.group.
-      // The window itself is the container. Calling tabs.group across windows pulls tabs into original window!
-      await chrome.windows.create({
-        url: urls,
-        focused: true,
-        type: 'normal',
-      });
-      return {
-        success: true,
-        message: `Opened all ${urls.length} pages in a new window.`,
-      };
+      try {
+        // Step 1: Create standard normal window with about:blank (bypasses Chrome pop-up blocker)
+        const newWin = (await chrome.windows.create({
+          url: 'about:blank',
+          type: 'normal',
+          focused: true,
+        })) as chrome.windows.Window;
+
+        const newWinId = newWin?.id;
+
+        if (newWinId) {
+          // Identify initial blank tab
+          const initialTabs = newWin.tabs || (await chrome.tabs.query({ windowId: newWinId }));
+          const blankTabId =
+            initialTabs.find((t) => t.url === 'about:blank' || t.title === 'about:blank')?.id ||
+            initialTabs[0]?.id;
+
+          // Step 2: Populate with workspace tabs
+          for (let i = 0; i < urls.length; i++) {
+            await chrome.tabs.create({
+              windowId: newWinId,
+              url: urls[i],
+              active: i === 0, // Focus the first page
+            });
+          }
+
+          // Step 3: Remove the initial about:blank tab so user has a clean window
+          if (blankTabId) {
+            try {
+              await chrome.tabs.remove(blankTabId);
+            } catch (_) {}
+          }
+
+          // Ensure window focus
+          try {
+            await chrome.windows.update(newWinId, { focused: true });
+          } catch (_) {}
+
+          return {
+            success: true,
+            message: `Opened all ${urls.length} pages in a new window.`,
+          };
+        }
+      } catch (winErr) {
+        console.warn('New window creation failed or blocked by policy; falling back to current window:', winErr);
+        // Fallback: Open in current window if Chrome/policy blocks new window creation
+        for (const url of urls) {
+          await chrome.tabs.create({ url, active: false });
+        }
+        return {
+          success: true,
+          message: `Opened ${urls.length} pages in current window (new window blocked by browser).`,
+        };
+      }
     }
 
     // Action (Current Window): Open tabs with chrome.tabs.create, then group them using chrome.tabs.group
