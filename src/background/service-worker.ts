@@ -2,11 +2,8 @@ import { mapToChromeGroupColor } from '../services/browser-adapter';
 
 // Chrome extension service worker
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[My Task Browser] Extension installed or updated:', details.reason);
-  if (details.reason === 'install') {
-    // Optionally open the welcome/dashboard page
-    chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
-  }
+  console.log('[Orbita] id:', chrome.runtime.id, 'version:', chrome.runtime.getManifest().version, 'reason:', details.reason);
+  // No auto tab open on install — prevents unexpected tabs and duplicate tabs.
 });
 
 /**
