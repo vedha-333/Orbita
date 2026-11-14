@@ -44,3 +44,8 @@ desktop.ini
 coverage/
 *.lcov
 .nyc_output
+
+# Temporary files & local test clones
+file_list.txt
+orbita-chrome-fresh/
+

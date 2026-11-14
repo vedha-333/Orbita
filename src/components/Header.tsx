@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Settings, Plus, Sparkles } from 'lucide-react';
+import { Search, Settings, Plus, Sparkles, ExternalLink } from 'lucide-react';
 import { isExtensionEnvironment } from '../services/browser-adapter';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenTabAssign: () => void;
   onOpenSettings: () => void;
   onOpenGuide?: () => void;
+  onOpenInNewWindow?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onCreateWorkspace,
   onOpenTabAssign,
   onOpenSettings,
+  onOpenInNewWindow,
 }) => {
   const isExtension = isExtensionEnvironment();
 
@@ -96,8 +98,19 @@ export const Header: React.FC<HeaderProps> = ({
           <span>New Workspace</span>
         </button>
 
-        {/* Utility actions: Settings */}
+        {/* Utility actions: Settings & New Window */}
         <div className="nav-utilities">
+          {onOpenInNewWindow && (
+            <button
+              id="btn-open-new-window"
+              className="nav-icon-btn"
+              onClick={onOpenInNewWindow}
+              title="Open Dashboard in a New Window"
+              aria-label="Open Dashboard in a New Window"
+            >
+              <ExternalLink size={16} />
+            </button>
+          )}
           <button
             id="btn-settings"
             className="nav-icon-btn"
